@@ -1,0 +1,39 @@
+---
+title: "Plant Growth"
+author: "Philip"
+date: "2025-09-09"
+output: html_document
+---
+```{r}
+data("PlantGrowth")
+```
+```{r}
+head(PlantGrowth)
+str(PlantGrowth)
+```
+```{r}
+mean_by_group <- aggregate(weight ~ group, data = PlantGrowth, mean)
+
+# Median by group
+median_by_group <- aggregate(weight ~ group, data = PlantGrowth, median)
+
+# Combine into one table
+stats_table <- data.frame(
+  group = mean_by_group$group,
+  mean = mean_by_group$weight,
+  median = median_by_group$weight
+)
+
+Stats_table
+
+```
+
+
+
+
+
+
+
+
+
+
