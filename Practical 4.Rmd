@@ -1,0 +1,81 @@
+---
+title: "Practical 4"
+author: "Philip"
+date: "2025-09-25"
+output: html_document
+---
+```{r}
+#Q1 Download from the assignment repository in Github
+url_counts <- "https://raw.githubusercontent.com/ghazkha/Assessment4/main/gene_expression.tsv"
+download.file(url_counts, destfile = "gene_expression.tsv", quiet = TRUE)
+
+```
+```{r}
+# Read table; make gene IDs the row names 
+tbl <- read.table("gene_expression.tsv", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+row.names(tbl) <- tbl[,1]
+tbl <- tbl[ , -1]
+
+# Show table for first six genes  
+head(tbl, 6)
+
+```
+
+```{r}
+#Q2 Add mean across samples 
+tbl$mean_expr <- rowMeans(tbl)
+head(tbl, 6)
+
+```
+```{r}
+# Q3 List the 10 genes with highest mean
+head(tbl[order(-tbl$mean_expr), , drop=FALSE], 10)
+
+```
+```{r}
+#Q4 Number of genes with mean < 10
+sum(tbl$mean_expr < 10)
+
+```
+```{r}
+# Q5 Create Histogram 
+hist(tbl$mean_expr, xlab="Mean expression", main="Distribution of mean counts")
+
+```
+```{r}
+# Q6 download and find column names
+url_growth <- "https://raw.githubusercontent.com/ghazkha/Assessment4/main/growth_data.csv"
+download.file(url_growth, destfile = "growth_data.csv", quiet = TRUE)
+dt <- read.csv("growth_data.csv", stringsAsFactors = FALSE)   
+
+# Inspect column names
+names(dt)
+
+```
+```{r}
+# Q7: mean & standard deviation at start (2005) and end (2020) by site
+with(dt, tapply(Circumf_2005_cm, Site, function(x) c(mean=mean(x), sd=sd(x))))
+with(dt, tapply(Circumf_2020_cm, Site, function(x) c(mean=mean(x), sd=sd(x))))
+
+
+```
+```{r}
+# Q8: Boxplots of start vs end circumference
+boxplot(Circumf_2005_cm ~ Site, data=dt,
+        ylab="Tree circumference (cm)", main="Start (2005) by site")
+boxplot(Circumf_2020_cm ~ Site, data=dt,
+        ylab="Tree circumference (cm)", main="End (2020) by site")
+
+```
+```{r}
+# Q9: Mean growth over the last 10 years (2010–2020) at each site
+dt$growth_10y <- dt$Circumf_2020_cm - dt$Circumf_2010_cm
+with(dt, tapply(growth_10y, Site, mean))
+
+```
+
+```{r}
+# Q10: estimating the 10 year growth at the two sites.
+t.test(growth_10y ~ Site, data=dt)
+```
+
