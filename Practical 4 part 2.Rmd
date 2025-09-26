@@ -1,0 +1,167 @@
+---
+title: "Practical 4 Part 2"
+author: "Philip"
+date: "2025-09-25"
+output: html_document
+---
+```{r}
+# load directory 
+library(seqinr)
+library(R.utils)
+
+
+```
+```{r}
+#Q1 Download Oxalobacter formigenes CDS
+url_oxa <- "https://ftp.ensemblgenomes.ebi.ac.uk/pub/bacteria/release-62/fasta/bacteria_10_collection/oxalobacter_formigenes_oxcc13_gca_000158495/cds/Oxalobacter_formigenes_oxcc13_gca_000158495.ASM15849v1.cds.all.fa.gz"
+download.file(url_oxa, destfile="oxalobacter_formigenes_cds.fa.gz", quiet=TRUE)
+gunzip("oxalobacter_formigenes_cds.fa.gz", overwrite=TRUE)
+cds_oxa <- read.fasta("oxalobacter_formigenes_cds.fa", seqtype="DNA")
+
+# Download E. coli MG1655 CDS
+url_ecoli <- "https://ftp.ensemblgenomes.ebi.ac.uk/pub/bacteria/release-62/fasta/bacteria_0_collection/escherichia_coli_str_k_12_substr_mg1655_gca_000005845/cds/Escherichia_coli_str_k_12_substr_mg1655_gca_000005845.ASM584v2.cds.all.fa.gz"
+download.file(url_ecoli, destfile="ecoli_cds.fa.gz", quiet=TRUE)
+gunzip("ecoli_cds.fa.gz", overwrite=TRUE)
+cds_ecoli <- read.fasta("ecoli_cds.fa", seqtype="DNA")
+
+```
+```{r}
+# Q1: to find number of CDS entries
+n_cds <- data.frame(
+  Organism  = c("E. coli K-12 MG1655", "Oxalobacter formigenes OXCC13"),
+  CDS_count = c(length(cds_ecoli), length(cds_oxa))
+)
+knitr::kable(n_cds, caption = "Number of coding sequences (CDS)")
+
+```
+
+```{r}
+#Q2 Coding DNA Present :Per-CDS lengths from the fasta objects
+len_ecoli <- as.numeric(summary(cds_ecoli)[, 1])
+len_oxa   <- as.numeric(summary(cds_oxa)[, 1])
+
+total_bp <- data.frame(
+  Organism   = c("E. coli K-12 MG1655", "Oxalobacter formigenes OXCC13"),
+  Total_bp   = c(sum(len_ecoli), sum(len_oxa)),
+  Mean_len   = c(mean(len_ecoli), mean(len_oxa)),
+  Median_len = c(median(len_ecoli), median(len_oxa))
+)
+knitr::kable(total_bp, caption = "Total coding DNA and summary lengths (bp)")
+
+```
+```{r}
+#Q3 Plot Boxplot of CDS lengths
+boxplot(list(`E. coli` = len_ecoli, `Oxalobacter formigenes OXCC13` = len_oxa),
+        ylab = "CDS length (bp)", main = "CDS length distributions")
+
+#  length of all coding sequences (Print mean + median again)
+c( mean_ecoli   = mean(len_ecoli),   median_ecoli   = median(len_ecoli),
+  mean_oxa     = mean(len_oxa),     median_oxa     = median(len_oxa)
+)
+
+```
+```{r}
+#Q4 frequency of DNA bases in the total coding sequences for both organisms
+# Flatten all CDS, 
+dna_ecoli <- toupper(unlist(cds_ecoli))
+dna_ecoli <- dna_ecoli[dna_ecoli %in% c("A","C","G","T")]
+
+dna_oxa <- toupper(unlist(cds_oxa))
+dna_oxa <- dna_oxa[dna_oxa %in% c("A","C","G","T")]
+
+# Count with zero-protected levels
+basefreq_ecoli <- table(factor(dna_ecoli, levels = c("A","C","G","T")))
+basefreq_oxa   <- table(factor(dna_oxa,   levels = c("A","C","G","T")))
+
+# Bar Plots
+barplot(basefreq_ecoli, main="E. coli base composition", ylab="Count", xlab="Base")
+barplot(basefreq_oxa,   main="Oxalobacter formigenes base composition", ylab="Count",xlab="Base")
+
+```
+```{r}
+# Translate CDS -> proteins (if not already done)
+prot_ecoli <- lapply(cds_ecoli, seqinr::translate)
+prot_oxa   <- lapply(cds_oxa,   seqinr::translate)
+
+```
+```{r}
+# Flatten to single vectors of one-letter AAs and drop stops
+aa_ecoli <- unlist(prot_ecoli)
+aa_oxa   <- unlist(prot_oxa)
+aa_ecoli <- aa_ecoli[aa_ecoli != "*"]
+aa_oxa   <- aa_oxa[aa_oxa != "*"]
+
+# Fixed 20-AA alphabet
+aa_levels <- strsplit("ACDEFGHIKLMNPQRSTVWY", "")[[1]]
+
+# Counts with zero-protected levels
+aafreq_ecoli <- table(factor(aa_ecoli, levels = aa_levels))
+aafreq_oxa   <- table(factor(aa_oxa,   levels = aa_levels))
+
+# Plots
+barplot(aafreq_ecoli, las = 2, ylab = "Count",
+        main = "E. coli amino acid composition", xlab = "Amino acid")
+barplot(aafreq_oxa,   las = 2, ylab = "Count",
+        main = "Oxalobacter formigenes amino acid composition", xlab = "Amino acid")
+```
+```{r}
+# Q5:  codon usage table and quantify the codon usage bias among all coding sequences
+
+# E. coli RSCU across all CDS
+rscu_ecoli <- uco(unlist(cds_ecoli), index="rscu", as.data.frame=TRUE)
+
+# Oxalobacter formigenes across all CDS
+rscu_oxa   <- uco(unlist(cds_oxa),   index="rscu", as.data.frame=TRUE)
+
+# Show first 10 codons for each organism
+head(rscu_ecoli, 10)
+head(rscu_oxa, 10)
+
+# Compare visually with barplots
+barplot(rscu_ecoli$freq, names.arg=rscu_ecoli$codon,
+        las=2, main="E. coli codon usage (RSCU)", cex.names=0.6, ylab="RSCU")
+barplot(rscu_oxa$freq, names.arg=rscu_oxa$codon,
+        las=2, main="Oxalobacter formigenes codon usage", cex.names=0.6, ylab="RSCU")
+
+```
+```{r}
+# Q6:identify 10 protein sequence k-mers (k = 3–5)
+
+# Flatten proteins into single character vectors
+prots_ecoli <- unlist(lapply(cds_ecoli, translate))
+prots_oxa   <- unlist(lapply(cds_oxa,   translate))
+
+# Define amino acid alphabet (drop stop codons '*')
+aa <- unique(prots_ecoli)
+aa <- aa[aa != "*"]
+
+## ---- K=3 example ----
+k3_ecoli <- count(prots_ecoli, wordsize=3, alphabet=aa)
+k3_oxa   <- count(prots_oxa,   wordsize=3, alphabet=aa)
+
+# Top 10 over- and under-represented 3-mers in Salmonella
+top_over_oxa3  <- head(sort(k3_oxa, decreasing=TRUE), 10)
+top_under_oxa3 <- head(sort(k3_oxa, decreasing=FALSE),10)
+
+# Plot
+barplot(as.numeric(top_over_oxa3), names.arg=names(top_over_oxa3),
+        las=2, main="Oxalobacter: Top 10 over-represented 3-mers")
+barplot(as.numeric(top_under_oxa3), names.arg=names(top_under_oxa3),
+        las=2, main="Oxalobacter: Top 10 under-represented 3-mers")
+
+# Compare with E. coli counts for those same k-mers
+k3_ecoli[names(top_over_oxa3)]
+k3_ecoli[names(top_under_oxa3)]
+
+## ---- K=4 example ----
+k4_oxa   <- count(prots_oxa,   wordsize=4, alphabet=aa)
+top_over_oxa4  <- head(sort(k4_oxa, decreasing=TRUE), 10)
+top_under_oxa4 <- head(sort(k4_oxa, decreasing=FALSE),10)
+
+## ---- K=5 example ----
+k5_oxa   <- count(prots_oxa,   wordsize=5, alphabet=aa)
+top_over_oxa5  <- head(sort(k5_oxa, decreasing=TRUE), 10)
+top_under_oxa5 <- head(sort(k5_oxa, decreasing=FALSE),10)
+
+```
+
