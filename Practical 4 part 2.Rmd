@@ -4,6 +4,8 @@ author: "Philip"
 date: "2025-09-25"
 output: html_document
 ---
+Directory sequinr and R.utils were loaded 
+
 ```{r}
 # load directory 
 library(seqinr)
@@ -11,6 +13,10 @@ library(R.utils)
 
 
 ```
+1. Number of coding sequences (CDS)
+The complete CDS FASTA files for Oxalobacter formigenes (OXCC13) and Escherichia coli (K-12 MG1655) were downloaded from the Ensembl Bacteria FTP server using download.file().
+After decompression with gunzip(), sequences were read into R using read.fasta().
+The total number of CDS entries was obtained using length() for each organism.
 ```{r}
 #Q1 Download Oxalobacter formigenes CDS
 url_oxa <- "https://ftp.ensemblgenomes.ebi.ac.uk/pub/bacteria/release-62/fasta/bacteria_10_collection/oxalobacter_formigenes_oxcc13_gca_000158495/cds/Oxalobacter_formigenes_oxcc13_gca_000158495.ASM15849v1.cds.all.fa.gz"
@@ -34,6 +40,12 @@ n_cds <- data.frame(
 knitr::kable(n_cds, caption = "Number of coding sequences (CDS)")
 
 ```
+Obsv-E. coli encodes more genes than O. formigenes, reflecting its larger genome and broader metabolic capacity.
+
+
+2. Total coding DNA and CDS summary lengths
+For each CDS, sequence length was extracted using summary() on the FASTA object.
+The total base pairs, mean, and median CDS lengths were then computed using sum(), mean(), and median() respectively.
 
 ```{r}
 #Q2 Coding DNA Present :Per-CDS lengths from the fasta objects
@@ -49,6 +61,12 @@ total_bp <- data.frame(
 knitr::kable(total_bp, caption = "Total coding DNA and summary lengths (bp)")
 
 ```
+Obsv-CDS sizes are typical for prokaryotes, though E. coli’s total coding content is almost double that of O. formigenes.
+
+
+Q3- Distribution of CDS lengths
+CDS lengths for both species were visualized using a boxplot (boxplot() function) to compare their distributions.
+The mean and median lengths were also displayed numerically.
 ```{r}
 #Q3 Plot Boxplot of CDS lengths
 boxplot(list(`E. coli` = len_ecoli, `Oxalobacter formigenes OXCC13` = len_oxa),
@@ -60,6 +78,13 @@ c( mean_ecoli   = mean(len_ecoli),   median_ecoli   = median(len_ecoli),
 )
 
 ```
+Obsv-Both organisms show similar CDS length patterns, but E. coli genes are slightly longer on average, consistent with its higher gene count.
+
+
+Q4-Base composition in coding sequences
+All CDS were flattened into nucleotide vectors (unlist()), filtered to include only A, C, G, and T bases, and counted using table().
+The base frequencies were then visualized with barplot() for each organism
+The CDS of E. coli and Oxalobacter formigenes were translated into proteins using seqinr::translate(). Stop codons were removed, amino acid frequencies were counted with table(), and results were visualized as bar plots.
 ```{r}
 #Q4 frequency of DNA bases in the total coding sequences for both organisms
 # Flatten all CDS, 
@@ -78,8 +103,13 @@ barplot(basefreq_ecoli, main="E. coli base composition", ylab="Count", xlab="Bas
 barplot(basefreq_oxa,   main="Oxalobacter formigenes base composition", ylab="Count",xlab="Base")
 
 ```
+The analysis of the protein-coding sequences revealed distinct patterns between E. coli and Oxalobacter formigenes. The higher GC content observed in O. formigenes suggests a genome-level compositional bias, which directly affects its codon usage and consequently its amino acid composition.
+GC-rich genomes tend to prefer codons ending in G or C, leading to a higher frequency of amino acids encoded by GC-rich codons such as Glycine (G), Alanine (A), Proline (P), and Arginine (R). In contrast, E. coli, with a more balanced AT–GC ratio, exhibits a broader and more evenly distributed codon usage pattern.
+
+These differences in codon and amino acid composition may reflect adaptations to the organisms’ ecological niches and metabolic requirements. Codon bias can influence translation efficiency and gene expression levels, meaning O. formigenes may have evolved codon preferences that optimize protein synthesis under its specific environmental and physiological conditions.
+
 ```{r}
-# Translate CDS -> proteins (if not already done)
+# Translate CDS -> proteins
 prot_ecoli <- lapply(cds_ecoli, seqinr::translate)
 prot_oxa   <- lapply(cds_oxa,   seqinr::translate)
 
@@ -104,6 +134,13 @@ barplot(aafreq_ecoli, las = 2, ylab = "Count",
 barplot(aafreq_oxa,   las = 2, ylab = "Count",
         main = "Oxalobacter formigenes amino acid composition", xlab = "Amino acid")
 ```
+
+The amino acid composition analysis revealed clear differences between E. coli and Oxalobacter formigenes. E. coli displayed a relatively balanced distribution of amino acids, with higher levels of leucine, alanine, and glycine, reflecting its versatile metabolic capacity and ability to adapt to varied environments. In contrast, O. formigenes showed a higher proportion of GC-rich amino acids such as alanine, arginine, and glycine, which corresponds with its GC-rich genome. This suggests a strong codon usage bias and possible evolutionary adaptation to its specialized gut habitat. Overall, the variation in amino acid composition between the two organisms highlights how genomic content influences protein composition and reflects distinct ecological and physiological adaptations.
+
+
+Q5-Codon usage and bias
+Codon usage bias was quantified using the Relative Synonymous Codon Usage (RSCU) index, calculated with uco() for each organism.
+Results were compared visually with barplots of RSCU values.
 ```{r}
 # Q5:  codon usage table and quantify the codon usage bias among all coding sequences
 
@@ -124,44 +161,102 @@ barplot(rscu_oxa$freq, names.arg=rscu_oxa$codon,
         las=2, main="Oxalobacter formigenes codon usage", cex.names=0.6, ylab="RSCU")
 
 ```
+E. coli codon usage: Prefers A/T-ending codons.
+O. formigenes codon usage: Favors G/C-ending codons, showing a higher codon bias.
+
+Codon preferences reflect species-specific genomic composition and tRNA availability.
+O. formigenes demonstrates stronger codon bias consistent with its GC-rich genome.
+
+
+Q6 – Identification of Protein Sequence k-mers (k = 3–5)
+Protein sequences from E. coli and Oxalobacter formigenes were flattened into single-character vectors, and stop codons were removed. Using the count() function, amino acid subsequences (k-mers) of lengths 3, 4, and 5 were identified. The frequencies of all possible k-mers were calculated, and the top 10 most over-represented and under-represented 3-mers were plotted for O. formigenes. Similar patterns were compared to E. coli for reference.And was repeated for 4 mers and 5 mers 
 ```{r}
-# Q6:identify 10 protein sequence k-mers (k = 3–5)
+# Q6: Identify 10 protein sequence k-mers (k = 3–5) for both E. coli and Oxalobacter
 
 # Flatten proteins into single character vectors
 prots_ecoli <- unlist(lapply(cds_ecoli, translate))
 prots_oxa   <- unlist(lapply(cds_oxa,   translate))
 
-# Define amino acid alphabet (drop stop codons '*')
+# Define amino acid alphabet (remove stop codons '*')
 aa <- unique(prots_ecoli)
 aa <- aa[aa != "*"]
 
-## ---- K=3 example ----
+### -------------------------------
+### K = 3 analysis
+### -------------------------------
 k3_ecoli <- count(prots_ecoli, wordsize=3, alphabet=aa)
 k3_oxa   <- count(prots_oxa,   wordsize=3, alphabet=aa)
 
-# Top 10 over- and under-represented 3-mers in Salmonella
-top_over_oxa3  <- head(sort(k3_oxa, decreasing=TRUE), 10)
-top_under_oxa3 <- head(sort(k3_oxa, decreasing=FALSE),10)
+# Top 10 over- and under-represented 3-mers
+top_over_ecoli3  <- head(sort(k3_ecoli, decreasing=TRUE), 10)
+top_under_ecoli3 <- head(sort(k3_ecoli, decreasing=FALSE),10)
+top_over_oxa3    <- head(sort(k3_oxa,   decreasing=TRUE), 10)
+top_under_oxa3   <- head(sort(k3_oxa,   decreasing=FALSE),10)
 
-# Plot
+# Bar plots (E. coli vs Oxalobacter)
+par(mfrow=c(2,2))
+barplot(as.numeric(top_over_ecoli3), names.arg=names(top_over_ecoli3),
+        las=2, main="E. coli: Top 10 over-represented 3-mers", col="lightblue")
+barplot(as.numeric(top_under_ecoli3), names.arg=names(top_under_ecoli3),
+        las=2, main="E. coli: Top 10 under-represented 3-mers", col="lightblue")
 barplot(as.numeric(top_over_oxa3), names.arg=names(top_over_oxa3),
-        las=2, main="Oxalobacter: Top 10 over-represented 3-mers")
+        las=2, main="Oxalobacter: Top 10 over-represented 3-mers", col="lightgreen")
 barplot(as.numeric(top_under_oxa3), names.arg=names(top_under_oxa3),
-        las=2, main="Oxalobacter: Top 10 under-represented 3-mers")
+        las=2, main="Oxalobacter: Top 10 under-represented 3-mers", col="lightgreen")
 
-# Compare with E. coli counts for those same k-mers
-k3_ecoli[names(top_over_oxa3)]
-k3_ecoli[names(top_under_oxa3)]
+```
+```{r}
 
-## ---- K=4 example ----
+### K = 4 analysis
+
+k4_ecoli <- count(prots_ecoli, wordsize=4, alphabet=aa)
 k4_oxa   <- count(prots_oxa,   wordsize=4, alphabet=aa)
-top_over_oxa4  <- head(sort(k4_oxa, decreasing=TRUE), 10)
-top_under_oxa4 <- head(sort(k4_oxa, decreasing=FALSE),10)
 
-## ---- K=5 example ----
+# Top 10 over- and under-represented 4-mers
+top_over_ecoli4  <- head(sort(k4_ecoli, decreasing=TRUE), 10)
+top_under_ecoli4 <- head(sort(k4_ecoli, decreasing=FALSE),10)
+top_over_oxa4    <- head(sort(k4_oxa,   decreasing=TRUE), 10)
+top_under_oxa4   <- head(sort(k4_oxa,   decreasing=FALSE),10)
+
+# Bar plots (E. coli vs Oxalobacter)
+par(mfrow=c(2,2))
+barplot(as.numeric(top_over_ecoli4), names.arg=names(top_over_ecoli4),
+        las=2, main="E. coli: Top 10 over-represented 4-mers", col="lightblue")
+barplot(as.numeric(top_under_ecoli4), names.arg=names(top_under_ecoli4),
+        las=2, main="E. coli: Top 10 under-represented 4-mers", col="lightblue")
+barplot(as.numeric(top_over_oxa4), names.arg=names(top_over_oxa4),
+        las=2, main="Oxalobacter: Top 10 over-represented 4-mers", col="lightgreen")
+barplot(as.numeric(top_under_oxa4), names.arg=names(top_under_oxa4),
+        las=2, main="Oxalobacter: Top 10 under-represented 4-mers", col="lightgreen")
+
+
+```
+```{r}
+### K = 5 analysis
+
+k5_ecoli <- count(prots_ecoli, wordsize=5, alphabet=aa)
 k5_oxa   <- count(prots_oxa,   wordsize=5, alphabet=aa)
-top_over_oxa5  <- head(sort(k5_oxa, decreasing=TRUE), 10)
-top_under_oxa5 <- head(sort(k5_oxa, decreasing=FALSE),10)
+
+# Top 10 over- and under-represented 5-mers
+top_over_ecoli5  <- head(sort(k5_ecoli, decreasing=TRUE), 10)
+top_under_ecoli5 <- head(sort(k5_ecoli, decreasing=FALSE),10)
+top_over_oxa5    <- head(sort(k5_oxa,   decreasing=TRUE), 10)
+top_under_oxa5   <- head(sort(k5_oxa,   decreasing=FALSE),10)
+
+# Bar plots (E. coli vs Oxalobacter)
+par(mfrow=c(2,2))
+barplot(as.numeric(top_over_ecoli5), names.arg=names(top_over_ecoli5),
+        las=2, main="E. coli: Top 10 over-represented 5-mers", col="lightblue")
+barplot(as.numeric(top_under_ecoli5), names.arg=names(top_under_ecoli5),
+        las=2, main="E. coli: Top 10 under-represented 5-mers", col="lightblue")
+barplot(as.numeric(top_over_oxa5), names.arg=names(top_over_oxa5),
+        las=2, main="Oxalobacter: Top 10 over-represented 5-mers", col="lightgreen")
+barplot(as.numeric(top_under_oxa5), names.arg=names(top_under_oxa5),
+        las=2, main="Oxalobacter: Top 10 under-represented 5-mers", col="lightgreen")
 
 ```
 
+
+The frequent occurrence of certain amino acid triplets (3-mers) in O. formigenes suggests evolutionary preferences in protein sequence composition, possibly reflecting adaptations to its specific metabolic and environmental needs. In contrast, E. coli shows a more even distribution of motifs, consistent with its broader metabolic versatility. Identifying recurring k-mers helps in understanding protein folding patterns, conserved motifs, and evolutionary relationships between species.
+
+The k-mer analysis revealed that shorter motifs such as 3-mers were more frequently represented across protein sequences, showing clear patterns of over- and under-representation that may reflect conserved structural or functional regions. In contrast, 4-mers displayed lower overall frequencies, indicating increased sequence variability and fewer recurring motifs. The 5-mers were the least common, with many combinations absent entirely, suggesting that longer amino acid patterns are highly specific and rare within the protein dataset. Overall, as k increased, the diversity of possible motifs grew exponentially, leading to reduced repetition and highlighting sequence complexity.
