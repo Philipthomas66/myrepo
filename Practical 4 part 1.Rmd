@@ -4,12 +4,18 @@ author: "Philip"
 date: "2025-09-25"
 output: html_document
 ---
+Part 1 
+Q1 – Download the gene expression data
+Used the download.file() function to retrieve the gene_expression.tsv file directly from the GitHub repository and save it locally for analysis.
+
 ```{r}
 #Q1 Download from the assignment repository in Github
 url_counts <- "https://raw.githubusercontent.com/ghazkha/Assessment4/main/gene_expression.tsv"
 download.file(url_counts, destfile = "gene_expression.tsv", quiet = TRUE)
 
 ```
+ Read and prepare the data
+Read the tab-separated data into R using read.table(), set the first column (gene IDs) as row names, and removed it from the main data frame
 ```{r}
 # Read table; make gene IDs the row names 
 tbl <- read.table("gene_expression.tsv", header = TRUE, sep = "\t", stringsAsFactors = FALSE)
@@ -20,6 +26,8 @@ tbl <- tbl[ , -1]
 head(tbl, 6)
 
 ```
+Q2 – Calculate mean expression for each gene
+Used the rowMeans() function to compute the mean expression value across all samples for each gene and added this as a new column mean_expr.
 
 ```{r}
 #Q2 Add mean across samples 
@@ -27,21 +35,30 @@ tbl$mean_expr <- rowMeans(tbl)
 head(tbl, 6)
 
 ```
+Q3 –Top 10 genes with highest mean expression
+Sorted the dataset in descending order by mean_expr using order(tbl$mean_expr) and displayed the top 10.
 ```{r}
 # Q3 List the 10 genes with highest mean
 head(tbl[order(-tbl$mean_expr), , drop=FALSE], 10)
 
 ```
+Q4 –  Count of genes with mean expression < 10
+Used the logical condition tbl$mean_expr < 10 with the sum() function to count how many genes meet that condition
 ```{r}
 #Q4 Number of genes with mean < 10
 sum(tbl$mean_expr < 10)
 
 ```
+Q5 – Histogram of mean expression
+Created a histogram using hist(tbl$mean_expr) to visualize the distribution of mean gene expression across all genes.
 ```{r}
 # Q5 Create Histogram 
 hist(tbl$mean_expr, xlab="Mean expression", main="Distribution of mean counts")
 
 ```
+Q6 – Inspect tree growth data
+Downloaded and read the growth_data.csv file from GitHub using read.csv().
+Then used names(dt) to view the column names in the dataset.
 ```{r}
 # Q6 download and find column names
 url_growth <- "https://raw.githubusercontent.com/ghazkha/Assessment4/main/growth_data.csv"
@@ -52,12 +69,16 @@ dt <- read.csv("growth_data.csv", stringsAsFactors = FALSE)
 names(dt)
 
 ```
+Q7 – Mean and standard deviation of tree circumference
+Applied the tapply() function to calculate mean and standard deviation of circumference for each site in 2005 and 2020.
 ```{r}
 # Q7: mean & standard deviation at start (2005) and end (2020) by site
 with(dt, tapply(Circumf_2005_cm, Site, function(x) c(mean=mean(x), sd=sd(x))))
 with(dt, tapply(Circumf_2020_cm, Site, function(x) c(mean=mean(x), sd=sd(x))))
 
 ```
+Q8 – Boxplots for circumference comparison
+Used boxplot() to visualize tree circumferences in 2005 and 2020, grouped by site.
 ```{r}
 # Q8: Boxplots of start vs end circumference
 boxplot(Circumf_2005_cm ~ Site, data=dt,
@@ -66,12 +87,21 @@ boxplot(Circumf_2020_cm ~ Site, data=dt,
         ylab="Tree circumference (cm)", main="End (2020) by site")
 
 ```
+Q10 – Mean 10-year growth and comparison between sites
+Calculated 10-year growth using:
+dt$growth_10y <- dt$Circumf_2020_cm - dt$Circumf_2010_cm
+Then used tapply() to get mean growth per site and t.test() to test for significant differences between sites.
 ```{r}
 # Q9: Mean growth over the last 10 years (2010–2020) at each site
 dt$growth_10y <- dt$Circumf_2020_cm - dt$Circumf_2010_cm
 with(dt, tapply(growth_10y, Site, mean))
 
 ```
+Q10: Estimating the 10-year growth at the two sites
+To determine if there was a significant difference in tree growth between the two sites over a 10-year period (2010–2020)
+Here, growth_10y represents the growth in tree circumference over 10 years, and Site is the grouping variable representing the different locations.
+This test compares the mean growth at the two sites and checks whether the difference is statistically significant.Here, growth_10y represents the growth in tree circumference over 10 years, and Site is the grouping variable representing the different locations.
+This test compares the mean growth at the two sites and checks whether the difference is statistically significant.
 
 ```{r}
 # Q10: estimating the 10 year growth at the two sites.
